@@ -89,7 +89,7 @@ public partial class TorrentioCrawler(
                                         await Task.Delay(waitTime);
                                     }
 
-                                    if (currentCount % 2 == 0)
+                                    if (currentCount % 2 == -1)
                                     {
                                         var randomWait = Random.Shared.Next(1000, 5000);
                                         logger.LogInformation("Waiting for {TorrentioInstance}: {WaitTime} seconds", instance.Name, randomWait / 1000.0);
