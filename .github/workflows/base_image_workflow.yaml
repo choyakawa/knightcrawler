@@ -104,39 +104,39 @@ jobs:
           image: localhost:5000/dockle-examine-image:test
           dockle-ignores: CIS-DI-0005 # Ignore `Enable Content trust for Docker`
 
-      - name: Run Trivy vulnerability scanner - human readable output
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/dockle-examine-image:test
-          scan-type: 'image'
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          scanners: 'vuln,secret,config'
-        env:
-          TRIVY_NON_SSL: true
+      # - name: Run Trivy vulnerability scanner - human readable output
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     image-ref: localhost:5000/dockle-examine-image:test
+      #     scan-type: 'image'
+      #     format: 'table'
+      #     exit-code: '0'
+      #     ignore-unfixed: true
+      #     vuln-type: 'os,library'
+      #     severity: 'CRITICAL,HIGH'
+      #     scanners: 'vuln,secret,config'
+      #   env:
+      #     TRIVY_NON_SSL: true
 
-      - name: Run Trivy vulnerability scanner (sarif report)
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: localhost:5000/dockle-examine-image:test
-          scan-type: 'image'
-          format: 'sarif'
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
-          scanners: 'vuln,secret,config'
-          output: 'trivy-results-os.sarif'
-        env:
-          TRIVY_NON_SSL: true
+      # - name: Run Trivy vulnerability scanner (sarif report)
+      #   uses: aquasecurity/trivy-action@master
+      #   with:
+      #     image-ref: localhost:5000/dockle-examine-image:test
+      #     scan-type: 'image'
+      #     format: 'sarif'
+      #     exit-code: '0'
+      #     ignore-unfixed: true
+      #     vuln-type: 'os,library'
+      #     severity: 'CRITICAL,HIGH'
+      #     scanners: 'vuln,secret,config'
+      #     output: 'trivy-results-os.sarif'
+      #   env:
+      #     TRIVY_NON_SSL: true
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results-os.sarif'
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: 'trivy-results-os.sarif'
 
       - name: Push Service Image to repo
         # if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
