@@ -3,12 +3,12 @@
     "Instances": [
       {
         "Name": "Official",
-        "Url": "https://torrentio.strem.fun",
+        "Url": "https://model-blush.vercel.app",
         "RateLimit": {
-          "RequestLimit": 300,
-          "IntervalInSeconds": 3600,
-          "BatchSize": 300,
-          "ExceptionLimit": 5,
+          "RequestLimit": 3000,
+          "IntervalInSeconds": 60,
+          "BatchSize": 1000,
+          "ExceptionLimit": 50,
           "ExceptionIntervalInSeconds": 300
         }
       }
