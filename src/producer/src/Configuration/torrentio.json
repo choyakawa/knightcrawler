@@ -3,9 +3,9 @@
     "Instances": [
       {
         "Name": "Official",
-        "Url": "https://model-blush.vercel.app",
+        "Url": "https://cold-fire-c5b6.pub2.workers.dev",
         "RateLimit": {
-          "RequestLimit": 3000,
+          "RequestLimit": 6000,
           "IntervalInSeconds": 60,
           "BatchSize": 1000,
           "ExceptionLimit": 50,
