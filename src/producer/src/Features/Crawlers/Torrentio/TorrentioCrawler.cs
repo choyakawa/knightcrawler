@@ -116,9 +116,9 @@ public partial class TorrentioCrawler(
                     if (newTorrents.Count > 0)
                     {
                         await InsertTorrents(newTorrents);
-
-                        state.LastProcessedImdbId = items[^1].ImdbId;
                     }
+
+                    state.LastProcessedImdbId = items[^1].ImdbId;
                 }
             });
 
