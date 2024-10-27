@@ -5,7 +5,7 @@
         "Name": "Official",
         "Url": "https://cold-fire-c5b6.pub2.workers.dev",
         "RateLimit": {
-          "RequestLimit": 6000,
+          "RequestLimit": 1000000,
           "IntervalInSeconds": 60,
           "BatchSize": 1000,
           "ExceptionLimit": 50,
