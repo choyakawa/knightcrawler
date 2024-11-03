@@ -34,93 +34,73 @@ public partial class TorrentioCrawler(
         await Task.WhenAll(tasks);
     }
 
-    private Task ProcessForInstanceAsync(TorrentioInstance instance, HttpClient client, long totalRecordCount) =>
-        Task.Run(
-            async () =>
+private Task ProcessForInstanceAsync(TorrentioInstance instance, HttpClient client, long totalRecordCount) =>
+    Task.Run(
+        async () =>
+        {
+            var emptyMetaDbItemsCount = 0;
+
+            var state = instance.EnsureStateExists(_instanceStates);
+
+            while (state.TotalProcessed < totalRecordCount)
             {
-                var emptyMetaDbItemsCount = 0;
+                logger.LogInformation("Processing {TorrentioInstance}", instance.Name);
+                logger.LogInformation("Current processed requests: {ProcessedRequests}", state.TotalProcessed);
 
-                var state = instance.EnsureStateExists(_instanceStates);
+                var items = await Storage.GetImdbEntriesForRequests(
+                    DateTime.UtcNow.Year,
+                    instance.RateLimit.BatchSize,
+                    state.LastProcessedImdbId);
 
-                SetupResiliencyPolicyForInstance(instance, state);
-
-                while (state.TotalProcessed < totalRecordCount)
+                if (items.Count == 0)
                 {
-                    logger.LogInformation("Processing {TorrentioInstance}", instance.Name);
-                    logger.LogInformation("Current processed requests: {ProcessedRequests}", state.TotalProcessed);
+                    emptyMetaDbItemsCount++;
+                    logger.LogInformation("No items to process for {TorrentioInstance}", instance.Name);
 
-                    var items = await Storage.GetImdbEntriesForRequests(
-                        DateTime.UtcNow.Year,
-                        instance.RateLimit.BatchSize,
-                        state.LastProcessedImdbId);
-
-                    if (items.Count == 0)
+                    if (emptyMetaDbItemsCount >= MaximumEmptyItemsCount)
                     {
-                        emptyMetaDbItemsCount++;
-                        logger.LogInformation("No items to process for {TorrentioInstance}", instance.Name);
-                        await Task.Delay(10000);
-                        if (emptyMetaDbItemsCount >= MaximumEmptyItemsCount)
-                        {
-                            logger.LogInformation("Maximum empty document count reached. Cancelling {TorrentioInstance}", instance.Name);
-                            break;
-                        }
-
-                        continue;
+                        logger.LogInformation("Maximum empty document count reached. Cancelling {TorrentioInstance}", instance.Name);
+                        break;
                     }
 
-                    var newTorrents = new List<IngestedTorrent>();
-                    var processedItemsCount = 0;
-
-                    foreach (var item in items)
-                    {
-                        try
-                        {
-                            var currentCount = processedItemsCount;
-
-                            await state.ResiliencyPolicy.ExecuteAsync(
-                                async () =>
-                                {
-                                    var waitTime = instance.CalculateWaitTime(state);
-
-                                    if (waitTime > TimeSpan.Zero)
-                                    {
-                                        logger.LogInformation("Rate limit reached for {TorrentioInstance}", instance.Name);
-                                        logger.LogInformation("Waiting for {TorrentioInstance}: {WaitTime} seconds", instance.Name, waitTime / 1000.0);
-                                        await Task.Delay(waitTime);
-                                    }
-
-                                    if (currentCount % 2 == -1)
-                                    {
-                                        var randomWait = Random.Shared.Next(1000, 5000);
-                                        logger.LogInformation("Waiting for {TorrentioInstance}: {WaitTime} seconds", instance.Name, randomWait / 1000.0);
-                                        await Task.Delay(randomWait);
-                                    }
-
-                                    var torrentInfo = await ScrapeInstance(instance, item.ImdbId, client);
-
-                                    if (torrentInfo is not null)
-                                    {
-                                        newTorrents.AddRange(torrentInfo.Where(x => x != null).Select(x => x!));
-                                    }
-                                });
-
-                            processedItemsCount++;
-                        }
-                        catch (Exception)
-                        {
-                            logger.LogWarning("Too many policy failures. Setting possibly rate limited for {TorrentioInstance}", instance.Name);
-                            instance.SetPossiblyRateLimited(state);
-                        }
-                    }
-
-                    if (newTorrents.Count > 0)
-                    {
-                        await InsertTorrents(newTorrents);
-                    }
-
-                    state.LastProcessedImdbId = items[^1].ImdbId;
+                    continue;
                 }
-            });
+
+                var newTorrents = new ConcurrentBag<IngestedTorrent>();
+                var processedItemsCount = 0;
+
+                await Parallel.ForEachAsync(items, new ParallelOptions { MaxDegreeOfParallelism = 8 }, async (item, ct) =>
+                {
+                    try
+                    {
+                        var torrentInfo = await ScrapeInstance(instance, item.ImdbId, client);
+
+                        if (torrentInfo is not null)
+                        {
+                            foreach (var torrent in torrentInfo.Where(x => x != null))
+                            {
+                                newTorrents.Add(torrent!);
+                            }
+                        }
+
+                        Interlocked.Increment(ref processedItemsCount);
+                    }
+                    catch (Exception)
+                    {
+                        logger.LogWarning("Error processing item {ImdbId} for {TorrentioInstance}", item.ImdbId, instance.Name);
+                        instance.SetPossiblyRateLimited(state);
+                    }
+                });
+
+                if (newTorrents.Count > 0)
+                {
+                    await InsertTorrents(newTorrents.ToList());
+                }
+
+                state.LastProcessedImdbId = items[^1].ImdbId;
+            }
+        });
+
 
     private void SetupResiliencyPolicyForInstance(TorrentioInstance instance, TorrentioScrapeInstance state)
     {
