@@ -69,7 +69,7 @@ private Task ProcessForInstanceAsync(TorrentioInstance instance, HttpClient clie
                 var newTorrents = new ConcurrentBag<IngestedTorrent>();
                 var processedItemsCount = 0;
 
-                await Parallel.ForEachAsync(items, new ParallelOptions { MaxDegreeOfParallelism = 8 }, async (item, ct) =>
+                await Parallel.ForEachAsync(items, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (item, ct) =>
                 {
                     try
                     {
