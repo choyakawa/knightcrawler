@@ -69,7 +69,7 @@ private Task ProcessForInstanceAsync(TorrentioInstance instance, HttpClient clie
                 var newTorrents = new ConcurrentBag<IngestedTorrent>();
                 var processedItemsCount = 0;
 
-                await Parallel.ForEachAsync(items, new ParallelOptions { MaxDegreeOfParallelism = 16 }, async (item, ct) =>
+                await Parallel.ForEachAsync(items, new ParallelOptions { MaxDegreeOfParallelism = 32 }, async (item, ct) =>
                 {
                     try
                     {
@@ -107,7 +107,7 @@ private Task ProcessForInstanceAsync(TorrentioInstance instance, HttpClient clie
         var retryPolicy = Policy
             .Handle<Exception>()
             .WaitAndRetryAsync(
-                retryCount: 2, // initial attempt + 2 retries
+                retryCount: 16, // initial attempt + 16 retries
                 sleepDurationProvider: retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
                 onRetry: (exception, timeSpan, retryCount, _) =>
                 {
